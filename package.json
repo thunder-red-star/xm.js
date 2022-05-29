@@ -1,0 +1,12 @@
+{
+  "name": "xm.js",
+  "version": "1.0.0",
+  "description": "Simple API to manipulate Extended Module files",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
