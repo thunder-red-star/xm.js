@@ -1,8 +1,6 @@
 class Pattern {
 	constructor(xm) {
-		/*
-
-		 */
+		// Placeholder while I get tests working
 	}
 
 	getRow(row) {
