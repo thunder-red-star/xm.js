@@ -16,8 +16,7 @@ console.log("Number of patterns: " + xmObj.header.numPatterns);
 console.log("Number of instruments: " + xmObj.header.numInstruments);
 console.log("Number of channels: " + xmObj.header.numChannels);
 
-console.log("Checking if name of module is correct");
-assert.equal(xmObj.header.name, "kuk");
-if (xmObj.header.name === "kuk") {
-	console.log("Name of module is correct");
-}
+
+console.log("Getting pattern order");
+let patternOrder = xmObj.header.patternOrder;
+console.log(patternOrder);
