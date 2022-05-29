@@ -7,7 +7,7 @@ const XM = require('../src/index');
 const assert = require("assert");
 
 // Read file
-const xm = fs.readFileSync(__dirname + '/xm/kuk.xm');
+const xm = fs.readFileSync(__dirname + '/xm/acidrgn.xm');
 
 let xmObj = new XM(xm);
 

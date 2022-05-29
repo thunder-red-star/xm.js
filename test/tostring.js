@@ -3,8 +3,8 @@
 const XM = require('../src/index');
 const fs = require('fs');
 
-let kuk = fs.readFileSync(__dirname + '/xm/kuk.xm');
+let equinox = fs.readFileSync(__dirname + '/xm/equinox.xm');
 
-let kukXM = new XM(kuk);
+let xm = new XM(equinox);
 
-console.log(kukXM.toString());
+console.log(xm.toString());
