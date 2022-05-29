@@ -36,8 +36,9 @@ module.exports = class {
 
 		// Read header
 		this.header = {
-			name: xm.toString('ascii', 18, 38),
-			tracker: xm.toString('ascii', 38, 58),
+			// Remove non-ascii characters from name
+			name: xm.toString('ascii', 17, 37).replace(/[^\x20-\x7E]/g, ''),
+			tracker: xm.toString('ascii', 38, 58).replace(/[^\x20-\x7E]/g, ''),
 			version: xm.readUInt16LE(58),
 			headerSize: xm.readUInt16LE(60),
 			songLength: xm.readUInt16LE(64),
@@ -62,7 +63,5 @@ module.exports = class {
 		for (let i = 0; i < this.header.numInstruments; i++) {
 			this.instruments.push(xm.slice(xm.readUInt16LE(60) + this.header.numPatterns * 2 + i * 4, xm.readUInt16LE(60) + this.header.numPatterns * 2 + (i + 1) * 4));
 		}
-
-
 	}
 }
