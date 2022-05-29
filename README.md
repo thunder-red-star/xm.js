@@ -1,4 +1,4 @@
-<center><img src="assets/xmjs_logo.png" width="50px" height="50px" align="center" style="border-radius:5px"></center>
+<p align="center"><img src="assets/xmjs_logo.png" width="50px" height="50px" align="center" style="border-radius:5px"></p>
 <h1 align="center">libxm.js</h1>
 
 (uh oh, there's already something called xm.js, so let's call this one libxm.js)
