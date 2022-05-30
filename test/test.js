@@ -7,7 +7,7 @@ const XM = require('../src/index');
 const assert = require("assert");
 
 // Read file
-const xm = fs.readFileSync(__dirname + '/xm/acidrgn.xm');
+const xm = fs.readFileSync(__dirname + '/xm/kuk.xm');
 
 let xmObj = new XM(xm);
 
@@ -20,3 +20,9 @@ console.log("Number of channels: " + xmObj.header.numChannels);
 console.log("Getting pattern order");
 let patternOrder = xmObj.header.patternOrder;
 console.log(patternOrder);
+
+console.log("Getting instruments");
+let instruments = xmObj.instruments;
+console.log(instruments.toString());
+/*
+ */
