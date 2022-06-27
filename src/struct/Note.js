@@ -49,27 +49,27 @@ class Note {
 	 */
 	constructor(note, instrument, volume, effect, effectParam) {
 		if (note === null) {
-			note = 0;
+			note = null;
 		} else if (note < 0 || note > Note.NOTES.length) {
-			note = 0;
+			note = null;
 		}
 		if (instrument === null) {
-			instrument = 0;
+			instrument = null;
 		} else {
 			instrument = Math.min(Math.max(instrument, 0), 255);
 		}
 		if (volume === null) {
-			volume = 0;
+			volume = null
 		} else {
-			volume = volume & 0x0F;
+			volume = volume;
 		}
 		if (effect === null) {
-			effect = 0;
+			effect = null;
 		} else {
 			effect = effect;
 		}
 		if (effectParam === null) {
-			effectParam = 0;
+			effectParam = null;
 		} else {
 			effectParam = effectParam;
 		}
@@ -124,10 +124,12 @@ class Note {
 	}
 
 	convertVolumeEffect(volume) {
-		// Convert volume to decimal
-		volume = volume & 0x0F;
-		// Find volume representation in VOLUME_EFFECTS
-		return Note.VOLUME_EFFECTS[volume] || '..';
+		if (volume === null) {
+			return "..";
+		} else {
+			// Find volume representation in VOLUME_EFFECTS
+			return Note.VOLUME_EFFECTS[volume] || '..';
+		}
 	}
 
 
@@ -136,11 +138,11 @@ class Note {
 	}
 
 	convertNote(note) {
-		return Note.NOTES[note] || '..';
+		return Note.NOTES[note] || '...';
 	}
 
 	convertInstrument(instrument) {
-		if (instrument === 0) {
+		if (instrument === 0 || instrument === null) {
 			return '..';
 		} else {
 			if (instrument <= 0x0F) {
@@ -152,6 +154,9 @@ class Note {
 	}
 
 	convertEffect(effect) {
+		if (effect === null) {
+			return '.';
+		}
 		if (Object.keys(Note.EFFECT_MAP).includes(effect.toString(16))) {
 			return Note.EFFECT_MAP[effect.toString(16)].toUpperCase();
 		} else {
@@ -160,6 +165,11 @@ class Note {
 	}
 
 	convertEffectParam(effectParam) {
+		if (effectParam === null && this.effect === null) {
+			return '..';
+		} else if (effectParam === null) {
+			return '00';
+		}
 		if (effectParam === 0x00) {
 			return '00';
 		} else {
@@ -168,6 +178,137 @@ class Note {
 			} else {
 				return effectParam.toString(16).toUpperCase();
 			}
+		}
+	}
+
+	toBuffer () {
+		// Compress note such that the first byte represents the existence of note, instrument, volume, effect, and effectParam, if at least one of these is missing, else, just return the bytes for each
+		/*
+		  I.e. reversing the following:
+		  let firstByte = xm.readUInt8(offset);
+		offset++;
+		if (firstByte & 0x80) {
+			if (firstByte & 0x01) {
+				note = xm.readUInt8(offset);
+				offset++;
+			}
+			if (firstByte & 0x02) {
+				instrument = xm.readUInt8(offset);
+				offset++;
+			}
+			if (firstByte & 0x04) {
+				volume = xm.readUInt8(offset);
+				offset++;
+			}
+			if (firstByte & 0x08) {
+				effect = xm.readUInt8(offset);
+				offset++;
+			}
+			if (firstByte & 0x10) {
+				effectParameter = xm.readUInt8(offset);
+				offset++;
+			}
+		} else {
+			note = firstByte;
+			instrument = xm.readUInt8(offset);
+			offset++;
+			volume = xm.readUInt8(offset);
+			offset++;
+			effect = xm.readUInt8(offset);
+			offset++;
+			effectParameter = xm.readUInt8(offset);
+			offset++;
+		}
+
+		 */
+
+		let firstByte = 0x00;
+		if (this.note !== null) {
+			firstByte |= 0x01;
+		}
+		if (this.instrument !== null) {
+			firstByte |= 0x02;
+		}
+		if (this.volume !== null) {
+			firstByte |= 0x04;
+		}
+		if (this.effect !== null) {
+			firstByte |= 0x08;
+		}
+		if (this.effectParam !== null) {
+			firstByte |= 0x10;
+		}
+
+		if (firstByte !== 0) {
+			firstByte |= 0x80
+		}
+
+		// Allocate enough to hold the first byte and the rest of the data
+		let buffer;
+
+		if (firstByte & 0x80) {
+			buffer = Buffer.alloc(this.packedSize());
+
+			buffer.writeUInt8(firstByte, 0)
+			let offset = 1
+			if (this.note !== null) {
+				buffer.writeUInt8(this.note, offset);
+				offset++;
+			}
+			if (this.instrument !== null) {
+				buffer.writeUInt8(this.instrument, offset);
+				offset++;
+			}
+			if (this.volume !== null) {
+				buffer.writeUInt8(this.volume, offset);
+				offset++;
+			}
+			if (this.effect !== null) {
+				buffer.writeUInt8(this.effect, offset);
+				offset++;
+			}
+			if (this.effectParam !== null) {
+				buffer.writeUInt8(this.effectParam, offset);
+				offset++;
+			}
+		} else {
+			buffer = Buffer.alloc(5);
+			buffer.writeUInt8(this.note, 0);
+			buffer.writeUInt8(this.instrument, 1);
+			buffer.writeUInt8(this.volume, 2);
+			buffer.writeUInt8(this.effect, 3);
+			buffer.writeUInt8(this.effectParam, 4);
+		}
+
+		return buffer;
+	}
+
+	packedSize () {
+		let firstByte = 0x00;
+		if (this.note !== null) {
+			firstByte |= 0x01;
+		}
+		if (this.instrument !== null) {
+			firstByte |= 0x02;
+		}
+		if (this.volume !== null) {
+			firstByte |= 0x04;
+		}
+		if (this.effect !== null) {
+			firstByte |= 0x08;
+		}
+		if (this.effectParam !== null) {
+			firstByte |= 0x10;
+		}
+
+		if (firstByte !== 0) {
+			firstByte |= 0x80
+		}
+
+		if (firstByte & 0x80) {
+			return 1 + (firstByte & 0x01 ? 1 : 0) + (firstByte & 0x02 ? 1 : 0) + (firstByte & 0x04 ? 1 : 0) + (firstByte & 0x08 ? 1 : 0) + (firstByte & 0x10 ? 1 : 0);
+		} else {
+			return 5;
 		}
 	}
 }

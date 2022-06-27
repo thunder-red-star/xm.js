@@ -30,6 +30,36 @@ class Pattern {
 		}
 		return returnString;
 	}
+
+	toBuffer () {
+		// Write pattern header
+		let headerBuffer = Buffer.alloc(9);
+		headerBuffer.writeUInt32LE(9, 0);
+		headerBuffer.writeUInt8(this.header.packingType, 4);
+		headerBuffer.writeUInt16LE(this.rows.length, 5);
+		headerBuffer.writeUInt16LE(this.packedPatternDataSize(), 7);
+		Buffer.concat([headerBuffer, Buffer.from(this.header.numRows.toString(16), 'hex')]);
+
+		// Write pattern rows
+		let rowBuffer = Buffer.alloc(this.packedPatternDataSize())
+
+		// Write
+		let offset = 0;
+		for (let x = 0; x < this.rows.length; x++) {
+			this.rows[x].toBuffer().copy(rowBuffer, offset)
+			offset += this.rows[x].rowDataSize();
+		}
+		return Buffer.concat([headerBuffer, rowBuffer]);
+
+	}
+
+	packedPatternDataSize() {
+		let size = 0;
+		for (let x = 0; x < this.rows.length; x++) {
+			size += this.rows[x].rowDataSize();
+		}
+		return size
+	}
 }
 
 

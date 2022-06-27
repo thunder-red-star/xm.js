@@ -39,6 +39,28 @@ class Patterns {
 	getPatterns() {
 		return this.patterns;
 	}
+
+	length() {
+		return this.patterns.length;
+	}
+
+	totalDataSize() {
+		let total = 0;
+		for (let x = 0; x < this.patterns.length; x++) {
+			total += this.patterns[x].packedPatternDataSize() + 9;
+		}
+		return total
+	}
+
+	toBuffer() {
+		let buffer = Buffer.alloc(this.totalDataSize())
+		let offset = 0
+		for (let i = 0; i < this.patterns.length; i++) {
+			this.patterns[i].toBuffer().copy(buffer, offset)
+			offset += this.patterns[i].packedPatternDataSize() + 9;
+		}
+		return buffer;
+	}
 }
 
 module.exports = Patterns;

@@ -27,6 +27,36 @@ class Row {
 		}
 		return returnString;
 	}
+
+	toBuffer () {
+		let buffer = Buffer.alloc(this.rowDataSize());
+		let offset = 0;
+		for (let i = 0; i < this.notes.length; i++) {
+			this.notes[i].toBuffer().copy(buffer, offset)
+			offset += this.notes[i].packedSize()
+		}
+		return buffer;
+	}
+
+	toHex () {
+		let buffer = Buffer.alloc(this.rowDataSize());
+		let offset = 0;
+		for (let i = 0; i < this.notes.length; i++) {
+			this.notes[i].toBuffer().copy(buffer, offset)
+			offset += this.notes[i].packedSize()
+		}
+		return buffer.toString("hex")
+	}
+
+
+	rowDataSize() {
+		let size = 0;
+		for (let x = 0; x < this.notes.length; x++) {
+			size += this.notes[x].packedSize();
+		}
+		return size;
+	}
 }
+
 
 module.exports = Row;

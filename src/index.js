@@ -62,7 +62,7 @@ module.exports = class {
 			// Remove non-ascii characters from name
 			name: xm.toString('ascii', 17, 37).replace(/[^\x20-\x7E]/g, '').trim(),
 			tracker: xm.toString('ascii', 38, 58).replace(/[^\x20-\x7E]/g, '').trim(),
-			version: xm.readUInt16LE(58),
+			version: [xm.readUInt8(58), xm.readUInt8(59)],
 			headerSize: xm.readUInt16LE(60),
 			songLength: xm.readUInt16LE(64),
 			restartPosition: xm.readUInt16LE(66),
@@ -205,11 +205,21 @@ module.exports = class {
 			if (instrumentHeader.numSamples > 0) {
 				// Read the rest of the instrument header
 				instrumentHeader.sampleHeaderSize = xm.readUInt32LE(offset + 29);
-				instrumentHeader.sampleKeymapAssignments = xm.slice(offset + 33, offset + 129).toCharCodes().removeEndingZeros();
-				instrumentHeader.volumeEnvelopePoints = xm.slice(offset + 129, offset + 177).toCharCodes().removeEndingZeros();
+				instrumentHeader.sampleKeymapAssignments = [];
+				for (let j = 33; j < 129; j++) {
+					instrumentHeader.sampleKeymapAssignments.push(xm.readUInt8(offset + j));
+				}
 				instrumentHeader.panningEnvelopePoints = xm.slice(offset + 177, offset + 225).toCharCodes().removeEndingZeros();
 				instrumentHeader.numVolumePoints = xm.readUInt8(offset + 225);
 				instrumentHeader.numPanningPoints = xm.readUInt8(offset + 226);
+				instrumentHeader.volumeEnvelopePoints = [];
+				for (let j = 129; j < instrumentHeader.numVolumePoints; j++) {
+					instrumentHeader.volumeEnvelopePoints.push(xm.readUInt8(offset + j));
+				}
+				instrumentHeader.panningEnvelopePoints = [];
+				for (let j = 177; j < instrumentHeader.numPanningPoints; j++) {
+					instrumentHeader.panningEnvelopePoints.push(xm.readUInt8(offset + j));
+				}
 				instrumentHeader.volumeSustainPoint = xm.readUInt8(offset + 227);
 				instrumentHeader.volumeLoopStartPoint = xm.readUInt8(offset + 228);
 				instrumentHeader.volumeLoopEndPoint = xm.readUInt8(offset + 229);
@@ -276,19 +286,25 @@ module.exports = class {
 						let sampleBits = (sampleHeader.type & 0x10) ? 16 : 8;
 						if (sampleBits === 8) {
 							// 8-bit sample
+							let list = [];
 							for (let j = 0; j < sampleHeader.length; j++) {
-								let value = xm.readUInt8(offset);
+								let value = xm.readInt8(offset);
+								list.push(value);
 								offset++;
-								sampleData.push(value - old);
-								old = value;
+								old += value;
+								let encodedValue = old & 0xFF;
+								if (encodedValue > 0x7F) {
+									encodedValue = encodedValue - 0x100;
+								}
+								sampleData.push(encodedValue);
 							}
 						} else {
 							// 16-bit sample
 							for (let j = 0; j < sampleHeader.length; j++) {
-								let value = xm.readUInt16LE(offset);
+								let value = xm.readInt16LE(offset);
 								offset += 2;
-								sampleData.push(value - old);
-								old = value;
+								old += value;
+								sampleData.push(old);
 							}
 						}
 					} else if (sampleHeader.packingType === 0xAD) {
@@ -299,7 +315,7 @@ module.exports = class {
 						// Decompress the sample data
 						let old = 0;
 						for (let j = 0; j < sampleHeader.length; j++) {
-							let compressionTableIndex = xm.readUInt8(offset);
+							let compressionTableIndex = xm.readInt8(offset);
 							old += compressionTable[compressionTableIndex];
 							sampleData.push(old);
 							offset++;
@@ -323,13 +339,11 @@ module.exports = class {
 					samples.push(sample);
 				}
 
-				console.log("Pushed instrument " + i + " with name " + instrumentHeader.name);
 				instruments.push(new Instrument(instrumentHeader, samples));
 			} else {
 				offset += 29;
 
 				// Push a dummy instrument
-				console.log('Pushing dummy instrument');
 				instruments.push(
 					new Instrument(
 						instrumentHeader,
@@ -344,5 +358,62 @@ module.exports = class {
 
 	toString() {
 		return this.patterns.toString();
+	}
+
+	toBuffer() {
+		// Rebuild the XM file
+		/*
+		let song = Buffer.from("Extended Module: ");
+		let version = this.header.version;
+		version = version.replace("v", "");
+		version = version.split(".")
+		version = version[0].toString(16) + version[1].toString(16);
+		song = Buffer.concat([song, Buffer.from(this.header.name.padEnd(22, ' '))]);
+		song = Buffer.concat([song, Buffer.from("\x1A")]);
+		song = Buffer.concat([song, Buffer.from(this.header.tracker.padEnd(20, ' '))]);
+		song = Buffer.concat([song, Buffer.from(version, "hex")]);
+		song = Buffer.concat([song, Buffer.from(this.header.headerSize.toString(16), "hex")]);
+		song = Buffer.concat([song, Buffer.from(this.header.songLength.toString(16), "hex")]);
+		song = Buffer.concat([song, Buffer.from(this.header.restartPosition.toString(16), "hex")]);
+		song = Buffer.concat([song, Buffer.from(this.header.numChannels.toString(16), "hex")]);
+		song = Buffer.concat([song, Buffer.from(this.patterns.length().toString(16), "hex")]);
+		song = Buffer.concat([song, Buffer.from(this.instruments.length().toString(16), "hex")]);
+		song = Buffer.concat([song, Buffer.from(this.header.flags.toString(16), "hex")]);
+		song = Buffer.concat([song, Buffer.from(this.header.defaultTempo.toString(16), "hex")]);
+		song = Buffer.concat([song, Buffer.from(this.header.defaultBPM.toString(16), "hex")]);
+		song = Buffer.concat([song, Buffer.from(this.header.patternOrder.toString(16), "hex")]);
+		*/
+
+		let song = Buffer.alloc(80 + 256);
+		song.write("Extended Module: ", 0, 17);
+		// Pad end with null characters
+		song.write(this.header.name, 17, 20);
+		song.write("\x1A", 37, 1);
+		song.write(this.header.tracker, 38, 20);
+		song.writeUInt8(this.header.version[0], 58);
+		song.writeUInt8(this.header.version[1], 59);
+		song.writeUInt32LE(20 + 256, 60);
+		song.writeUInt16LE(this.header.patternOrder.length, 64);
+		song.writeUInt16LE(this.header.restartPosition, 66);
+		song.writeUInt16LE(this.header.numChannels, 68);
+		song.writeUInt16LE(this.patterns.length(), 70);
+		song.writeUInt16LE(this.instruments.length(), 72);
+		song.writeUInt16LE(this.header.flags, 74);
+		song.writeUInt16LE(this.header.defaultTempo, 76);
+		song.writeUInt16LE(this.header.defaultBPM, 78);
+		let offset;
+		for (offset = 80; offset < this.header.patternOrder.length + 80; offset++) {
+			song.writeUInt8(this.header.patternOrder[offset - 80], offset);
+		}
+		for (offset; offset < 256 + 80; offset++) {
+			song.writeUInt8(0, offset);
+		}
+		// Write the patterns, concat patterns.toBuffer() together
+		song = Buffer.concat([song, Buffer.from(this.patterns.toBuffer())]);
+
+		// Write the instruments, concat instruments.toBuffer() together
+		song = Buffer.concat([song, Buffer.from(this.instruments.toBuffer())]);
+
+		return song;
 	}
 }

@@ -39,6 +39,23 @@ class Instruments {
 		}
 		return returnString;
 	}
+
+	// Count total bytes of all instruments
+	countBytes() {
+		let total = 0;
+		for (let i = 0; i < this.instruments.length; i++) {
+			total += this.instruments[i].countBytes();
+		}
+		return total;
+	}
+
+	toBuffer() {
+		let buffer = Buffer.from("");
+		for (let i = 0; i < this.instruments.length; i++) {
+			buffer = Buffer.concat([buffer, this.instruments[i].toBuffer()]);
+		}
+		return buffer;
+	}
 }
 
 module.exports = Instruments;
